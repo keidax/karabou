@@ -1,0 +1,8 @@
+#!/bin/sh
+
+DEVNODE=/dev/input/event5
+
+intercept -g $DEVNODE \
+    | ./enter2ctrl capslock ctrl esc \
+    | ./enter2ctrl enter ctrl \
+    | uinput -d $DEVNODE
