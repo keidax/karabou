@@ -1,13 +1,11 @@
 cmake_minimum_required(VERSION 3.0)
 
+# Used by YCM
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-project(caps2esc)
+project(karabou)
 
-add_executable(caps2esc caps2esc.c)
-target_compile_options(caps2esc PRIVATE -Wall -Wextra)
+add_executable(karabou karabou.c keys.c event_queue.c)
+target_compile_options(karabou PRIVATE -Wall -Wextra)
 
-add_executable(enter2ctrl enter2ctrl.c keys.c event_queue.c)
-target_compile_options(enter2ctrl PRIVATE -Wall -Wextra)
-
-install(TARGETS caps2esc RUNTIME DESTINATION bin)
+install(TARGETS karabou RUNTIME DESTINATION bin)
