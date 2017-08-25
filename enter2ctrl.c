@@ -6,28 +6,7 @@
 
 #include <linux/input.h>
 
-// NOTE: ##token pastes the token, #token "stringizes"
-#define keycode(name) { .code = KEY_##name, .code_name = #name }
-
-struct keycode_pair {
-    unsigned int code;
-    char * code_name;
-};
-
-const struct keycode_pair keycode_pairs[] =  {
-    keycode(ESC),
-    keycode(ENTER),
-    keycode(RIGHTCTRL),
-    keycode(LEFTCTRL),
-    keycode(CAPSLOCK),
-
-    // Other names
-    {KEY_LEFTCTRL, "LCTRL"},
-    {KEY_LEFTCTRL, "CTRL"},
-    {KEY_RIGHTCTRL, "RCTRL"}
-};
-
-const unsigned int NUM_PAIRS = sizeof(keycode_pairs) / sizeof(struct keycode_pair);
+#include "keys.h"
 
 int equal(const struct input_event *first, const struct input_event *second) {
     return first->type == second->type && first->code == second->code &&
@@ -61,24 +40,14 @@ hold_key_repeat = {.type = EV_KEY, .code = 0, .value = 2},
 tap_key_repeat  = {.type = EV_KEY, .code = 0, .value = 2};
 // clang-format on
 
-const int MAX_NAME_SIZE = 100;
-
-// Match a string to a KEY_CODE value
-int find_key_code(char * key_str) {
-    for(unsigned i = 0; i < NUM_PAIRS; i++) {
-        struct keycode_pair kp = keycode_pairs[i];
-        if(!strncasecmp(key_str, kp.code_name, MAX_NAME_SIZE)) {
-            /* fprintf(stderr, "matched to keycode %s\n", kp.code_name); */
-            return kp.code;
-        }
-    }
-    return 0;
-}
+key_group target_group = { 0 },
+          hold_group = { 0 },
+          tap_group = { 0 };
 
 void set_key_code(char * key_str, struct input_event * event_up,
         struct input_event * event_down, struct input_event * event_repeat) {
 
-    int code = find_key_code(key_str);
+    int code = get_keycode(key_str);
     if(!code) {
         fprintf(stderr, "could not find keycode for %s\n", key_str);
         exit(EXIT_FAILURE);
@@ -94,12 +63,17 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+    init_key_group(argv[1], &target_group);
+    init_key_group(argv[2], &hold_group);
+
     set_key_code(argv[1], &main_key_up, &main_key_down, &main_key_repeat);
     set_key_code(argv[2], &hold_key_up, &hold_key_down, &hold_key_repeat);
 
     if(argc > 3) {
+        init_key_group(argv[3], &tap_group);
         set_key_code(argv[3], &tap_key_up, &tap_key_down, &tap_key_repeat);
     } else {
+        init_key_group(argv[1], &tap_group);
         set_key_code(argv[1], &tap_key_up, &tap_key_down, &tap_key_repeat);
     }
 
