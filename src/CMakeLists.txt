@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.0)
 
 # Used by YCM
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(karabou)
+project(karabou C)
 
-add_executable(karabou karabou.c keys.c event_queue.c)
+add_executable(karabou
+    event_queue.c
+    karabou.c
+    keys.c
+    )
 target_compile_options(karabou PRIVATE -Wall -Wextra)
 
 install(TARGETS karabou RUNTIME DESTINATION bin)
