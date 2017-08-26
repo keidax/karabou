@@ -40,7 +40,7 @@ hold_key_repeat = {.type = EV_KEY, .code = 0, .value = 2},
 tap_key_repeat  = {.type = EV_KEY, .code = 0, .value = 2};
 // clang-format on
 
-key_group target_group = { 0 },
+key_group_t target_group = { 0 },
           hold_group = { 0 },
           tap_group = { 0 };
 
