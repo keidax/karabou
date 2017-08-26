@@ -1,10 +1,3 @@
-cmake_minimum_required(VERSION 3.0)
-
-# Used by YCM
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-project(karabou C)
-
 add_executable(karabou
     event_queue.c
     karabou.c
