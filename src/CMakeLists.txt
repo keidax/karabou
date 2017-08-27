@@ -1,3 +1,7 @@
+if (UNIT_TESTING)
+    add_definitions(-DUNIT_TESTING)
+endif()
+
 # We'll use this to link against the main executable and also test binaries
 set(KARABOU_LIBRARY __karabou CACHE STRING "Internal Karabou library")
 
