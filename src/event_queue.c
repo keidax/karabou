@@ -1,7 +1,7 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "assert.h"
 #include "event_queue.h"
 
 bool is_queue_empty(event_queue_t * q) {

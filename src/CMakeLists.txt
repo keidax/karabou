@@ -1,8 +1,12 @@
-add_executable(karabou
-    event_queue.c
-    karabou.c
-    keys.c
-    )
-target_compile_options(karabou PRIVATE -Wall -Wextra)
+# We'll use this to link against the main executable and also test binaries
+set(KARABOU_LIBRARY __karabou CACHE STRING "Internal Karabou library")
 
-install(TARGETS karabou RUNTIME DESTINATION bin)
+# Add new source files here
+set(lib_files
+    event_queue.c
+    keys.c)
+
+add_library(${KARABOU_LIBRARY} STATIC ${lib_files})
+
+add_executable(karabou karabou.c)
+target_link_libraries(karabou ${KARABOU_LIBRARY})
