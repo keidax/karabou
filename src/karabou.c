@@ -7,6 +7,7 @@
 #include <linux/input.h>
 
 #include "keys.h"
+#include "event_queue.h"
 
 int equal(const struct input_event *first, const struct input_event *second) {
     return first->type == second->type && first->code == second->code &&
@@ -22,62 +23,41 @@ void write_event(const struct input_event *event) {
         exit(EXIT_FAILURE);
 }
 
-// Structure of input_event:
-// type:  EV_KEY for keypress
-// code:  keycodes (defined in input_event_codes.h)
-// value: 1 for press, 0 for release, 2 for autorepeat
+input_event_t * duplicate_event(input_event_t * evt) {
+    input_event_t * new_evt = malloc(sizeof(input_event_t));
 
-// clang-format off
-struct input_event
-main_key_up     = {.type = EV_KEY, .code = 0, .value = 0},
-hold_key_up     = {.type = EV_KEY, .code = 0, .value = 0},
-tap_key_up      = {.type = EV_KEY, .code = 0, .value = 0},
-main_key_down   = {.type = EV_KEY, .code = 0, .value = 1},
-hold_key_down   = {.type = EV_KEY, .code = 0, .value = 1},
-tap_key_down    = {.type = EV_KEY, .code = 0, .value = 1},
-main_key_repeat = {.type = EV_KEY, .code = 0, .value = 2},
-hold_key_repeat = {.type = EV_KEY, .code = 0, .value = 2},
-tap_key_repeat  = {.type = EV_KEY, .code = 0, .value = 2};
-// clang-format on
+    new_evt->type = evt->type;
+    new_evt->code = evt->code;
+    new_evt->value = evt->value;
 
-key_group_t target_group = { 0 },
-          hold_group = { 0 },
-          tap_group = { 0 };
+    return new_evt;
+}
 
-void set_key_code(char * key_str, struct input_event * event_up,
-        struct input_event * event_down, struct input_event * event_repeat) {
+event_queue_t pending_queue = { NULL },
+              active_queue = { NULL };
 
-    int code = get_keycode(key_str);
-    if(!code) {
-        fprintf(stderr, "could not find keycode for %s\n", key_str);
-        exit(EXIT_FAILURE);
+key_group_t target_group = {
+        .mods = {},
+        .mod_count = 0,
+        .keys = { KEY_CAPSLOCK },
+        .key_count = 1
+    },
+    replace_group = {
+        .mods = {},
+        .mod_count = 0,
+        .keys = { KEY_ESC },
+        .key_count = 1
+    };
+
+void release_queue(event_queue_t * q) {
+    while(!is_queue_empty(q)) {
+        input_event_t * evt = pull_from_queue(q);
+        write_event(evt);
+        free(evt);
     }
-
-    event_up->code = code;
-    event_down->code = code;
-    event_repeat->code = code;
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        exit(EXIT_FAILURE);
-    }
-
-    init_key_group(argv[1], &target_group);
-    init_key_group(argv[2], &hold_group);
-
-    set_key_code(argv[1], &main_key_up, &main_key_down, &main_key_repeat);
-    set_key_code(argv[2], &hold_key_up, &hold_key_down, &hold_key_repeat);
-
-    if(argc > 3) {
-        init_key_group(argv[3], &tap_group);
-        set_key_code(argv[3], &tap_key_up, &tap_key_down, &tap_key_repeat);
-    } else {
-        init_key_group(argv[1], &tap_group);
-        set_key_code(argv[1], &tap_key_up, &tap_key_down, &tap_key_repeat);
-    }
-
-    int main_is_down = 0, hold_give_up = 0;
     struct input_event input;
 
     setbuf(stdin, NULL), setbuf(stdout, NULL);
@@ -89,32 +69,22 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        if (main_is_down) {
-            if (equal(&input, &main_key_down) ||
-                equal(&input, &main_key_repeat))
-                continue;
+        // Duplicate event
+        add_to_queue(&pending_queue, duplicate_event(&input));
+        if (target_group.keys[0] == input.code) { // TODO: test against all targets
+            // Traverse queue
+            event_queue_entry_t * current_entry = pending_queue.front;
 
-            if (equal(&input, &main_key_up)) {
-                main_is_down = 0;
-                if (hold_give_up) {
-                    hold_give_up = 0;
-                    write_event(&hold_key_up);
-                    continue;
+            while(current_entry) {
+                if(current_entry->event->code == target_group.keys[0]) {
+                    // TODO: perform full replacement
+                    current_entry->event->code = replace_group.keys[0];
+                    release_queue(&pending_queue);
                 }
-                write_event(&tap_key_down);
-                write_event(&tap_key_up);
-                continue;
+                current_entry = current_entry->next;
             }
-
-            if (!hold_give_up && input.value) {
-                hold_give_up = 1;
-                write_event(&hold_key_down);
-            }
-        } else if (equal(&input, &main_key_down)) {
-            main_is_down = 1;
-            continue;
+        } else {
+            release_queue(&pending_queue);
         }
-
-        write_event(&input);
     }
 }
