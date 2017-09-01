@@ -1,7 +1,22 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-DEVNODE=/dev/input/event5
+keyboard_handlers=$(awk '
+# Find a device with "keyboard" in the name
+$1=="N:" && $0 ~/keyboard/ { k=1 }
 
-intercept -g $DEVNODE \
-    | ./build/src/karabou \
-    | uinput -d $DEVNODE
+# Get the handlers for that device
+k && $1=="H:" {
+    # Break the handlers into an array
+    split($0, a, "=| ");
+    for(i in a) {
+        # Print the event handler
+        if(a[i] ~ /event/) { print a[i] }
+    };
+    k=0
+}
+' /proc/bus/input/devices)
+
+for event_handler in $keyboard_handlers; do
+    devnode="/dev/input/$event_handler"
+    sudo intercept -g $devnode | ./build/src/karabou | sudo uinput -d $devnode
+done
